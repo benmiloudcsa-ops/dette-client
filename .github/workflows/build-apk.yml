@@ -23,10 +23,10 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
 
-    - name: Install Flet CLI
+    - name: Install Dependencies
       run: |
         pip install --upgrade pip
-        pip install flet
+        pip install -r requirements.txt
 
     - name: Build APK with Flet
       run: |
