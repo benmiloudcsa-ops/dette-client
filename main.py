@@ -521,4 +521,4 @@ def main(page: ft.Page):
     update_dashboard_stats()
 
 if __name__ == "__main__":
-    ft.run(main=main)
+    ft.app(target=main)
