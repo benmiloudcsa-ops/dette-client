@@ -1,14 +1,15 @@
 import flet as ft
 from datetime import datetime
-import webbrowser
 import urllib.parse
 import pandas as pd
 from fpdf import FPDF
 import requests
+import threading
+import time
 
 # --- إعدادات Supabase السحابية ---
-SUPABASE_URL = "https://osvdhhqllhmdeybsuoss.supabase.co"      # استبدل برابط مشروعك في Supabase
-SUPABASE_KEY = "sb_publishable_BdSna0lbc71VC3tn2Wu0Yw_4x3RX-nS" # استبدل بمفتاح الـ Anon/Public API الخاص بك
+SUPABASE_URL = "https://osvdhhqllhmdeybsuoss.supabase.co"    # رابط مشروعك في Supabase
+SUPABASE_KEY = "sb_publishable_BdSna0lbc71VC3tn2Wu0Yw_4x3RX-nS" # مفتاح الـ Anon/Public API
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -36,28 +37,25 @@ def add_client(name, phone):
     requests.post(url, headers=headers, json=data)
 
 def delete_client(client_id):
-    # حذف المعاملات المرتبطة أولاً
     requests.delete(f"{SUPABASE_URL}/rest/v1/transactions?client_id=eq.{client_id}", headers=headers)
-    # حذف الزبون
     requests.delete(f"{SUPABASE_URL}/rest/v1/clients?id=eq.{client_id}", headers=headers)
 
-def add_transaction(client_id, amount, trans_type, date_str=None):
+def add_transaction(client_id, amount, trans_type, date_str=None, note=""):
     url = f"{SUPABASE_URL}/rest/v1/transactions"
     data = {
         "client_id": client_id,
         "amount": amount,
-        "type": trans_type
+        "type": trans_type,
+        "note": note.strip() if note else None
     }
     if date_str:
         data["date"] = date_str
     requests.post(url, headers=headers, json=data)
 
 def get_dashboard_stats():
-    # حساب عدد الزبائن
     res_clients = requests.get(f"{SUPABASE_URL}/rest/v1/clients?select=id", headers=headers)
     total_clients = len(res_clients.json()) if res_clients.status_code == 200 else 0
     
-    # حساب إجمالي الديون والمدفوعات
     res_txs = requests.get(f"{SUPABASE_URL}/rest/v1/transactions?select=amount,type", headers=headers)
     total_debt = 0
     total_paid = 0
@@ -90,7 +88,6 @@ def get_clients_summary(search_query=""):
     return []
 
 def get_client_period_report(client_id, start_date, end_date):
-    # حساب الرصيد السابق قبل تاريخ البداية
     url_prev = f"{SUPABASE_URL}/rest/v1/transactions?client_id=eq.{client_id}&date=lt.{start_date}&select=amount,type"
     res_prev = requests.get(url_prev, headers=headers)
     previous_balance = 0
@@ -101,26 +98,23 @@ def get_client_period_report(client_id, start_date, end_date):
             else:
                 previous_balance -= t["amount"]
                 
-    # جلب الحركات خلال الفترة المحددة
-    url_txs = f"{SUPABASE_URL}/rest/v1/transactions?client_id=eq.{client_id}&date=gte.{start_date}&date=lte.{end_date}&select=id,amount,type,date&order=date.asc,id.asc"
+    url_txs = f"{SUPABASE_URL}/rest/v1/transactions?client_id=eq.{client_id}&date=gte.{start_date}&date=lte.{end_date}&select=id,amount,type,date,note&order=date.asc,id.asc"
     res_txs = requests.get(url_txs, headers=headers)
     transactions = []
     if res_txs.status_code == 200:
         for t in res_txs.json():
-            transactions.append((t["id"], t["amount"], t["type"], t["date"]))
+            transactions.append((t["id"], t["amount"], t["type"], t["date"], t.get("note", "")))
             
     return previous_balance, transactions
 
-# --- 3. واجهة المستخدم الاحترافية ---
+# --- واجهة المستخدم الاحترافية ---
 def main(page: ft.Page):
-    page.title = "نظام إدارة ديون الزبائن "
+    page.title = "نظام إدارة ديون الزبائن - Gafaire"
     page.rtl = True  
     page.theme_mode = ft.ThemeMode.DARK
     page.bgcolor = "#0f172a"
     page.scroll = ft.ScrollMode.AUTO
     page.padding = 20
-
-    # جعل نافذة التطبيق تظهر مكبرة مهما كانت دقة الشاشة
     page.window.maximized = True
 
     stat_clients_text = ft.Text("0", size=22, weight=ft.FontWeight.BOLD, color="white")
@@ -130,7 +124,10 @@ def main(page: ft.Page):
         c_count, n_debt = get_dashboard_stats()
         stat_clients_text.value = str(c_count)
         stat_debt_text.value = f"{n_debt:,.2f} دج"
-        page.update()
+        try:
+            page.update()
+        except:
+            pass
 
     dashboard_card_clients = ft.Container(
         content=ft.Row([
@@ -140,10 +137,7 @@ def main(page: ft.Page):
                 stat_clients_text
             ], spacing=2)
         ], alignment=ft.MainAxisAlignment.START, spacing=15),
-        padding=15,
-        bgcolor="#1e293b",
-        border_radius=12,
-        expand=True
+        padding=15, bgcolor="#1e293b", border_radius=12, expand=True
     )
 
     dashboard_card_debt = ft.Container(
@@ -154,10 +148,7 @@ def main(page: ft.Page):
                 stat_debt_text
             ], spacing=2)
         ], alignment=ft.MainAxisAlignment.START, spacing=15),
-        padding=15,
-        bgcolor="#1e293b",
-        border_radius=12,
-        expand=True
+        padding=15, bgcolor="#1e293b", border_radius=12, expand=True
     )
 
     dashboard_header = ft.ResponsiveRow([
@@ -170,6 +161,20 @@ def main(page: ft.Page):
     add_client_btn = ft.FilledButton("إضافة زبون", icon=ft.Icons.PERSON_ADD, bgcolor="#0284c7", color="white", on_click=lambda e: handle_add_client())
 
     search_input = ft.TextField(label="بحث سريع عن زبون بالاسم أو الهاتف...", prefix_icon=ft.Icons.SEARCH, expand=True, focused_border_color="#38bdf8", on_change=lambda e: refresh_table())
+
+    def show_snack(message, color="green"):
+        page.snack_bar = ft.SnackBar(ft.Text(message, color="white"), bgcolor=color)
+        page.snack_bar.open = True
+        page.update()
+
+    # --- دالة التحديث اليدوي ---
+    def manual_refresh(e):
+        refresh_table()
+        update_dashboard_stats()
+        show_snack("تم تحديث البيانات بنجاح", "blue")
+
+    refresh_btn = ft.FilledButton("تحديث", icon=ft.Icons.REFRESH, bgcolor="#334155", color="white", on_click=manual_refresh)
+    export_excel_btn = ft.FilledButton("تصدير Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", on_click=lambda e: export_excel(e))
 
     def export_excel(e):
         clients_data = get_clients_summary(search_input.value if search_input.value else "")
@@ -192,8 +197,6 @@ def main(page: ft.Page):
         df.to_excel(file_name, index=False)
         show_snack(f"تم تصدير ملف Excel بنجاح باسم: {file_name}", "green")
 
-    export_excel_btn = ft.FilledButton("تصدير Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", on_click=export_excel)
-
     clients_table = ft.DataTable(
         columns=[
             ft.DataColumn(ft.Text("اسم الزبون", weight=ft.FontWeight.BOLD, color="#cbd5e1")),
@@ -206,13 +209,9 @@ def main(page: ft.Page):
     
     table_container = ft.Row([clients_table], scroll=ft.ScrollMode.AUTO, expand=True)
 
-    def show_snack(message, color="green"):
-        page.snack_bar = ft.SnackBar(ft.Text(message, color="white"), bgcolor=color)
-        page.snack_bar.open = True
-        page.update()
-
     trans_amount_input = ft.TextField(label="المبلغ (دج)", keyboard_type=ft.KeyboardType.NUMBER, expand=True)
     trans_date_input = ft.TextField(label="التاريخ", value=datetime.now().strftime("%Y-%m-%d"), expand=True)
+    trans_note_input = ft.TextField(label="ملاحظة العملية (اختياري)", prefix_icon=ft.Icons.NOTE, expand=True)
     trans_title_text = ft.Text("", weight=ft.FontWeight.BOLD, size=15, color="#38bdf8")
     current_trans_data = {"cid": None, "type": ""}
 
@@ -220,8 +219,10 @@ def main(page: ft.Page):
         try:
             amt = float(trans_amount_input.value)
             date_val = trans_date_input.value.strip()
-            add_transaction(current_trans_data['cid'], amt, current_trans_data['type'], date_val)
+            note_val = trans_note_input.value.strip()
+            add_transaction(current_trans_data['cid'], amt, current_trans_data['type'], date_val, note_val)
             trans_amount_input.value = ""
+            trans_note_input.value = ""
             trans_container.visible = False
             show_snack("تم تسجيل المعاملة بنجاح!")
             refresh_table()
@@ -237,6 +238,7 @@ def main(page: ft.Page):
                 ft.Column([trans_amount_input], col={"xs": 12, "sm": 6}),
                 ft.Column([trans_date_input], col={"xs": 12, "sm": 6}),
             ]),
+            ft.Row([trans_note_input]),
             ft.Row([
                 ft.FilledButton("تأكيد العملية", icon=ft.Icons.CHECK, bgcolor="#10b981", color="white", on_click=confirm_transaction), 
                 ft.TextButton("إلغاء", icon=ft.Icons.CLOSE, on_click=lambda e: setattr(trans_container, 'visible', False) or page.update())
@@ -253,6 +255,7 @@ def main(page: ft.Page):
         action_name = "إضافة دين جديد" if trans_type == 'debt' else "تسجيل عملية تسديد"
         trans_title_text.value = f"{action_name} للزبون: {name}"
         trans_amount_input.value = ""
+        trans_note_input.value = ""
         trans_container.visible = True
         page.update()
 
@@ -313,15 +316,16 @@ def main(page: ft.Page):
             report_lines.append("لا توجد حركات مسجلة خلال هذه الفترة.")
         else:
             running_balance = prev_balance
-            for t_id, amt, t_type, t_date in txs:
+            for t_id, amt, t_type, t_date, note in txs:
+                note_str = f" ({note})" if note else ""
                 if t_type == 'debt':
                     running_balance += amt
-                    t_desc = f"دين: +{amt:.2f} دج"
+                    t_desc = f"دين: +{amt:.2f} دج{note_str}"
                     t_color = "#f87171"
                     report_lines.append(f"▫️ {t_date} | {t_desc} | الرصيد: {running_balance:.2f}")
                 else:
                     running_balance -= amt
-                    t_desc = f"تسديد: -{amt:.2f} دج"
+                    t_desc = f"تسديد: -{amt:.2f} دج{note_str}"
                     t_color = "#34d399"
                     report_lines.append(f"▫️ {t_date} | {t_desc} | الرصيد: {running_balance:.2f}")
                 
@@ -354,7 +358,9 @@ def main(page: ft.Page):
             
         encoded_text = urllib.parse.quote(report_text)
         whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_text}"
-        webbrowser.open(whatsapp_url)
+        
+        # استخدام page.launch_url المدعومة في Flet لتشغيل التطبيقات الخارجية على أندرويد
+        page.launch_url(whatsapp_url)
         show_snack("جاري فتح الواتساب لإرسال التقرير...")
 
     def export_pdf(e):
@@ -381,18 +387,20 @@ def main(page: ft.Page):
         pdf.ln(5)
         
         pdf.set_font("ArabicFont", "B", 10)
-        pdf.cell(40, 7, "التاريخ", 1)
-        pdf.cell(50, 7, "نوع المعاملة", 1)
-        pdf.cell(50, 7, "المبلغ (دج)", 1)
+        pdf.cell(30, 7, "التاريخ", 1)
+        pdf.cell(40, 7, "المعاملة", 1)
+        pdf.cell(35, 7, "المبلغ (دج)", 1)
+        pdf.cell(85, 7, "ملاحظة", 1)
         pdf.ln()
         
-        pdf.set_font("ArabicFont", "", 10)
+        pdf.set_font("ArabicFont", "", 9)
         for t in txs:
-            t_id, amt, t_type, t_date = t
+            t_id, amt, t_type, t_date, note = t
             t_str = "دين (+)" if t_type == 'debt' else "تسديد (-)"
-            pdf.cell(40, 6, str(t_date), 1)
-            pdf.cell(50, 6, t_str, 1)
-            pdf.cell(50, 6, f"{amt:.2f}", 1)
+            pdf.cell(30, 6, str(t_date), 1)
+            pdf.cell(40, 6, t_str, 1)
+            pdf.cell(35, 6, f"{amt:.2f}", 1)
+            pdf.cell(85, 6, str(note) if note else "", 1)
             pdf.ln()
             
         file_name = f"report_{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
@@ -468,14 +476,17 @@ def main(page: ft.Page):
                         ]
                     )
                 )
-        page.update()
+        try:
+            page.update()
+        except:
+            pass
 
     def handle_add_client():
         if name_input.value and name_input.value.strip():
             add_client(name_input.value.strip(), phone_input.value.strip() if phone_input.value else "")
             name_input.value = ""
             phone_input.value = ""
-            show_snack("تم إضافة الزبون بنجاح إلى السحابة!")
+            show_snack("تم إضافة الزبون بنجاح  !")
             refresh_table()
             update_dashboard_stats()
         else:
@@ -483,22 +494,20 @@ def main(page: ft.Page):
 
     add_client_section = ft.Container(
         content=ft.Column([
-            ft.Text("✨ إضافة زبون جديد (سحابي)", size=16, weight=ft.FontWeight.BOLD, color="#38bdf8"),
+            ft.Text("✨ إضافة زبون جديد ", size=16, weight=ft.FontWeight.BOLD, color="#38bdf8"),
             ft.ResponsiveRow([
                 ft.Column([name_input], col={"xs": 12, "sm": 5}),
                 ft.Column([phone_input], col={"xs": 12, "sm": 4}),
                 ft.Column([add_client_btn], col={"xs": 12, "sm": 3}),
             ], alignment=ft.MainAxisAlignment.START)
         ]),
-        padding=15,
-        bgcolor="#1e293b",
-        border_radius=12
+        padding=15, bgcolor="#1e293b", border_radius=12
     )
 
     page.add(
         ft.Row([
             ft.Icon(ft.Icons.CLOUD, size=28, color="#38bdf8"),
-            ft.Text("نظام تسيير وإدارة الديون ", size=22, weight=ft.FontWeight.BOLD, color="white")
+            ft.Text("نظام تسيير وإدارة الديون  ", size=22, weight=ft.FontWeight.BOLD, color="white")
         ], spacing=10),
         ft.Divider(color="#334155"),
         dashboard_header,
@@ -509,16 +518,28 @@ def main(page: ft.Page):
         delete_container,  
         report_container,  
         ft.ResponsiveRow([
-            ft.Column([search_input], col={"xs": 12, "sm": 9}),
-            ft.Column([export_excel_btn], col={"xs": 12, "sm": 3}),
+            ft.Column([search_input], col={"xs": 12, "sm": 7}),
+            ft.Column([refresh_btn], col={"xs": 6, "sm": 2}),
+            ft.Column([export_excel_btn], col={"xs": 6, "sm": 3}),
         ], alignment=ft.MainAxisAlignment.START),
         ft.Divider(height=10, color="transparent"),
         ft.Text("📋 قائمة الزبائن والديون", size=18, weight=ft.FontWeight.BOLD, color="white"),
         table_container
     )
 
+    # --- تشغيل خيط التحديث التلقائي في الخلفية (Background Polling) كل 10 ثوانٍ ---
+    def background_sync():
+        while True:
+            time.sleep(10)
+            try:
+                refresh_table()
+                update_dashboard_stats()
+            except:
+                pass
+
+    sync_thread = threading.Thread(target=background_sync, daemon=True)
+    sync_thread.start()
+
     refresh_table()
     update_dashboard_stats()
-
-if __name__ == "__main__":
     ft.app(target=main)
