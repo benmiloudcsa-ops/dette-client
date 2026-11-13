@@ -167,7 +167,6 @@ def main(page: ft.Page):
         page.snack_bar.open = True
         page.update()
 
-    # --- دالة التحديث اليدوي ---
     def manual_refresh(e):
         refresh_table()
         update_dashboard_stats()
@@ -359,8 +358,10 @@ def main(page: ft.Page):
         encoded_text = urllib.parse.quote(report_text)
         whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_text}"
         
-        # استخدام page.launch_url المدعومة في Flet لتشغيل التطبيقات الخارجية على أندرويد
-        page.launch_url(whatsapp_url)
+        try:
+            page.launch_url(whatsapp_url)
+        except:
+            pass
         show_snack("جاري فتح الواتساب لإرسال التقرير...")
 
     def export_pdf(e):
@@ -486,7 +487,7 @@ def main(page: ft.Page):
             add_client(name_input.value.strip(), phone_input.value.strip() if phone_input.value else "")
             name_input.value = ""
             phone_input.value = ""
-            show_snack("تم إضافة الزبون بنجاح  !")
+            show_snack("تم إضافة الزبون بنجاح !")
             refresh_table()
             update_dashboard_stats()
         else:
@@ -527,7 +528,7 @@ def main(page: ft.Page):
         table_container
     )
 
-    # --- تشغيل خيط التحديث التلقائي في الخلفية (Background Polling) كل 10 ثوانٍ ---
+    # --- خيط التحديث التلقائي في الخلفية (Background Polling) ---
     def background_sync():
         while True:
             time.sleep(10)
@@ -542,5 +543,7 @@ def main(page: ft.Page):
 
     refresh_table()
     update_dashboard_stats()
-    if __name__ == "__main__":
-        ft.app(target=main)
+
+# --- طريقة التشغيل الصحيحة في الجذر (خارج الدالة تماماً) ---
+if __name__ == "__main__":
+    ft.app(target=main)
