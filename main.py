@@ -327,7 +327,7 @@ def main(page: ft.Page):
                                 on_click=verify_password
                             )
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
-                        padding=30,
+                        padding=25,
                         bgcolor=c["card_bg"],
                         border_radius=16,
                         border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None,
@@ -338,7 +338,8 @@ def main(page: ft.Page):
             vertical_alignment=ft.MainAxisAlignment.CENTER,
             horizontal_alignment=ft.MainAxisAlignment.CENTER,
             bgcolor=c["bg"],
-            padding=20
+            padding=15,
+            scroll=ft.ScrollMode.AUTO
         )
         page.views.append(login_view)
         page.update()
@@ -352,8 +353,8 @@ def main(page: ft.Page):
         page.theme_mode = ft.ThemeMode.LIGHT if app_state["theme"] in ["light", "accounting", "light_blue"] else ft.ThemeMode.DARK
         page.bgcolor = c["bg"]
 
-        stat_clients_text = ft.Text("0", size=22, weight=ft.FontWeight.BOLD, color=c["text_main"])
-        stat_debt_text = ft.Text("0.00 دج", size=22, weight=ft.FontWeight.BOLD, color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626")
+        stat_clients_text = ft.Text("0", size=20, weight=ft.FontWeight.BOLD, color=c["text_main"])
+        stat_debt_text = ft.Text("0.00 دج", size=20, weight=ft.FontWeight.BOLD, color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626")
 
         def update_dashboard_stats():
             c_count, n_debt = get_dashboard_stats()
@@ -366,24 +367,24 @@ def main(page: ft.Page):
 
         dashboard_card_clients = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.PEOPLE, size=35, color=c["primary"]),
+                ft.Icon(ft.Icons.PEOPLE, size=30, color=c["primary"]),
                 ft.Column([
                     ft.Text("إجمالي الزبائن", size=12, color=c["text_sec"]),
                     stat_clients_text
                 ], spacing=2)
-            ], alignment=ft.MainAxisAlignment.START, spacing=15),
-            padding=15, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, expand=True
+            ], alignment=ft.MainAxisAlignment.START, spacing=12),
+            padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, expand=True
         )
 
         dashboard_card_debt = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, size=35, color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626"),
+                ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, size=30, color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626"),
                 ft.Column([
                     ft.Text("إجمالي الديون المعلقة", size=12, color=c["text_sec"]),
                     stat_debt_text
                 ], spacing=2)
-            ], alignment=ft.MainAxisAlignment.START, spacing=15),
-            padding=15, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, expand=True
+            ], alignment=ft.MainAxisAlignment.START, spacing=12),
+            padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, expand=True
         )
 
         dashboard_header = ft.ResponsiveRow([
@@ -393,7 +394,7 @@ def main(page: ft.Page):
 
         name_input = ft.TextField(label="اسم الزبون", prefix_icon=ft.Icons.PERSON, expand=True, focused_border_color=c["primary"])
         phone_input = ft.TextField(label="رقم الهاتف", prefix_icon=ft.Icons.PHONE, keyboard_type=ft.KeyboardType.PHONE, expand=True, focused_border_color=c["primary"])
-        add_client_btn = ft.FilledButton("إضافة زبون", icon=ft.Icons.PERSON_ADD, bgcolor=c["accent_btn"], color="white", on_click=lambda e: handle_add_client())
+        add_client_btn = ft.FilledButton("إضافة زبون", icon=ft.Icons.PERSON_ADD, bgcolor=c["accent_btn"], color="white", width=160, on_click=lambda e: handle_add_client())
 
         search_input = ft.TextField(label="بحث سريع عن زبون بالاسم أو الهاتف...", prefix_icon=ft.Icons.SEARCH, expand=True, focused_border_color=c["primary"], on_change=lambda e: refresh_table())
         
@@ -414,9 +415,9 @@ def main(page: ft.Page):
             update_dashboard_stats()
             show_snack("تم تحديث البيانات بنجاح", "blue")
 
-        refresh_btn = ft.FilledButton("تحديث", icon=ft.Icons.REFRESH, bgcolor="#334155" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#64748b", color="white", on_click=manual_refresh)
-        export_excel_btn = ft.FilledButton("تصدير Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", on_click=lambda e: export_excel(e))
-        logout_btn = ft.FilledButton("تسجيل الخروج", icon=ft.Icons.LOGOUT, bgcolor="#ef4444", color="white", on_click=lambda e: logout())
+        refresh_btn = ft.FilledButton("تحديث", icon=ft.Icons.REFRESH, bgcolor="#334155" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#64748b", color="white", expand=True, on_click=manual_refresh)
+        export_excel_btn = ft.FilledButton("تصدير Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", expand=True, on_click=lambda e: export_excel(e))
+        logout_btn = ft.FilledButton("خروج", icon=ft.Icons.LOGOUT, bgcolor="#ef4444", color="white", on_click=lambda e: logout())
         
         theme_dropdown = ft.Dropdown(
             value=app_state["theme"],
@@ -428,7 +429,7 @@ def main(page: ft.Page):
                 ft.dropdown.Option("dark", "🌙 داكن"),
                 ft.dropdown.Option("light", "☀️ فاتح")
             ],
-            width=160,
+            width=155,
             text_size=13,
             on_change=change_theme
         )
@@ -458,13 +459,15 @@ def main(page: ft.Page):
             show_snack(f"تم تصدير ملف Excel بنجاح باسم: {file_name}", "green")
 
         # --- حاوية تقرير أقدمية التسديد ---
-        seniority_title = ft.Text("⏳ تقرير أقدمية تسديد الديون (مرتب تنازلياً حسب الأقدمية)", weight=ft.FontWeight.BOLD, size=16, color=c["primary"])
+        seniority_title = ft.Text("⏳ تقرير أقدمية تسديد الديون (مرتب تنازلياً حسب الأقدمية)", weight=ft.FontWeight.BOLD, size=15, color=c["primary"])
         seniority_table = ft.DataTable(
+            column_spacing=12,
+            horizontal_margin=10,
             columns=[
-                ft.DataColumn(ft.Text("اسم الزبون", weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الهاتف", weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                ft.DataColumn(ft.Text("إجمالي الدين المتبقي", weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                ft.DataColumn(ft.Text("تاريخ آخر تسديد", weight=ft.FontWeight.BOLD, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الزبون", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الهاتف", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الدين", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
+                ft.DataColumn(ft.Text("آخر تسديد", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
             ],
             rows=[]
         )
@@ -490,7 +493,7 @@ def main(page: ft.Page):
             df.to_excel(file_name, index=False)
             show_snack(f"تم تصدير تقرير أقدمية التسديد بنجاح: {file_name}", "green")
 
-        export_seniority_excel_btn = ft.FilledButton("تصدير تقرير الأقدمية Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", on_click=export_seniority_excel)
+        export_seniority_excel_btn = ft.FilledButton("تصدير Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", on_click=export_seniority_excel)
 
         seniority_container = ft.Container(
             content=ft.Column([
@@ -502,9 +505,9 @@ def main(page: ft.Page):
                 ft.Row([
                     export_seniority_excel_btn,
                     ft.TextButton("إغلاق التقرير", icon=ft.Icons.CLOSE, on_click=lambda e: setattr(seniority_container, 'visible', False) or page.update())
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN)
+                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True)
             ], tight=True),
-            padding=15, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, visible=False
+            padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, visible=False
         )
 
         def open_seniority_report(e):
@@ -516,10 +519,10 @@ def main(page: ft.Page):
             if not data:
                 seniority_table.rows.append(
                     ft.DataRow(cells=[
-                        ft.DataCell(ft.Text("لا توجد بيانات مسجلة", color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", color=c["text_sec"])),
+                        ft.DataCell(ft.Text("لا توجد بيانات مسجلة", size=12, color=c["text_sec"])),
+                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
+                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
+                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
                     ])
                 )
             else:
@@ -527,24 +530,26 @@ def main(page: ft.Page):
                     seniority_table.rows.append(
                         ft.DataRow(
                             cells=[
-                                ft.DataCell(ft.Text(item["name"], weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                                ft.DataCell(ft.Text(item["phone"], color=c["text_sec"])),
-                                ft.DataCell(ft.Text(f"{item['debt']:,.2f} دج", color="#f87171" if item['debt'] > 0 else "#059669", weight=ft.FontWeight.BOLD)),
-                                ft.DataCell(ft.Text(item["last_payment"], color=c["primary"] if item["last_payment"] != "لا توجد تسديدات سابقة" else "#dc2626", weight=ft.FontWeight.BOLD)),
+                                ft.DataCell(ft.Text(item["name"], size=12, weight=ft.FontWeight.BOLD, color=c["text_main"])),
+                                ft.DataCell(ft.Text(item["phone"], size=12, color=c["text_sec"])),
+                                ft.DataCell(ft.Text(f"{item['debt']:,.2f} دج", size=12, color="#f87171" if item['debt'] > 0 else "#059669", weight=ft.FontWeight.BOLD)),
+                                ft.DataCell(ft.Text(item["last_payment"], size=12, color=c["primary"] if item["last_payment"] != "لا توجد تسديدات سابقة" else "#dc2626", weight=ft.FontWeight.BOLD)),
                             ]
                         )
                     )
             seniority_container.visible = True
             page.update()
 
-        report_seniority_btn = ft.FilledButton("تقرير أقدمية التسديد", icon=ft.Icons.HISTORY, bgcolor=c["accent_btn"], color="white", on_click=open_seniority_report)
+        report_seniority_btn = ft.FilledButton("أقدمية التسديد", icon=ft.Icons.HISTORY, bgcolor=c["accent_btn"], color="white", on_click=open_seniority_report)
 
         clients_table = ft.DataTable(
+            column_spacing=10,
+            horizontal_margin=8,
             columns=[
-                ft.DataColumn(ft.Text("اسم الزبون", weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الهاتف", weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                ft.DataColumn(ft.Text("إجمالي الدين", weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الإجراءات المتاحة", weight=ft.FontWeight.BOLD, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الزبون", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الهاتف", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الدين", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
+                ft.DataColumn(ft.Text("الإجراءات", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
             ],
             rows=[]
         )
@@ -586,7 +591,7 @@ def main(page: ft.Page):
                     ft.TextButton("إلغاء", icon=ft.Icons.CLOSE, on_click=lambda e: setattr(trans_container, 'visible', False) or page.update())
                 ], wrap=True)
             ], tight=True),
-            padding=15, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, visible=False
+            padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, visible=False
         )
 
         def open_trans_form(cid, name, trans_type):
@@ -602,7 +607,7 @@ def main(page: ft.Page):
             trans_amount_input.focus()
             page.update()
 
-        report_title = ft.Text("", weight=ft.FontWeight.BOLD, size=16, color=c["primary"])
+        report_title = ft.Text("", weight=ft.FontWeight.BOLD, size=15, color=c["primary"])
         start_date_input = ft.TextField(label="من تاريخ", value="2026-01-01", expand=True)
         end_date_input = ft.TextField(label="إلى تاريخ", value=datetime.now().strftime("%Y-%m-%d"), expand=True)
         report_results_column = ft.Column(spacing=5)
@@ -628,7 +633,7 @@ def main(page: ft.Page):
                 f"─────────────────"
             ]
             
-            report_results_column.controls.append(ft.Text(f"الرصيد السابق قبل {s_date}: {prev_balance:.2f} دج", weight=ft.FontWeight.BOLD, size=14, color=c["primary"] if prev_balance <= 0 else "#f87171"))
+            report_results_column.controls.append(ft.Text(f"الرصيد السابق قبل {s_date}: {prev_balance:.2f} دج", weight=ft.FontWeight.BOLD, size=13, color=c["primary"] if prev_balance <= 0 else "#f87171"))
             report_results_column.controls.append(ft.Divider())
             
             if not txs:
@@ -652,7 +657,7 @@ def main(page: ft.Page):
                     report_results_column.controls.append(
                         ft.Row([
                             ft.Text(f"التاريخ: {t_date}", size=12, color=c["text_sec"]),
-                            ft.Text(t_desc, color=t_color, weight=ft.FontWeight.BOLD, size=13),
+                            ft.Text(t_desc, color=t_color, weight=ft.FontWeight.BOLD, size=12),
                             ft.Text(f"الرصيد: {running_balance:.2f} دج", size=12, italic=True, color=c["text_main"])
                         ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True)
                     )
@@ -744,7 +749,7 @@ def main(page: ft.Page):
                 ft.Divider(),
                 report_results_column
             ], tight=True),
-            padding=15, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, visible=False
+            padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None, visible=False
         )
 
         def open_report_form(cid, name, phone):
@@ -778,10 +783,10 @@ def main(page: ft.Page):
             if not clients:
                 clients_table.rows.append(
                     ft.DataRow(cells=[
-                        ft.DataCell(ft.Text("لا توجد نتائج مطابقة للبحث أو الفلتر", color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", color=c["text_sec"])),
+                        ft.DataCell(ft.Text("لا توجد نتائج مطابقة للبحث أو الفلتر", size=12, color=c["text_sec"])),
+                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
+                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
+                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
                     ])
                 )
             else:
@@ -789,42 +794,58 @@ def main(page: ft.Page):
                     c_id, name, phone, debt = client
                     row_color = c["row_debt"] if debt > 0 else c["row_clear"]
                     
-                    # تم تصحيح تمرير cname هنا لكي يعرض اسم الزبون المحدد بشكل صحيح ودقيق
-                    actions_row = ft.Row([
+                    # توزيع الأيقونات الأربع بوضوح لتظهر كاملة على شاشة الهاتف
+                    actions_box = ft.Row([
                         ft.IconButton(
                             icon=ft.Icons.ADD_CIRCLE_OUTLINE,
+                            icon_size=20,
+                            padding=4,
+                            width=30,
+                            height=30,
                             icon_color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626",
                             tooltip="إضافة دين (+)",
                             on_click=lambda e, cid=c_id, cname=name: open_trans_form(cid, cname, 'debt')
                         ),
                         ft.IconButton(
                             icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,
+                            icon_size=20,
+                            padding=4,
+                            width=30,
+                            height=30,
                             icon_color="#34d399" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#059669",
                             tooltip="تسجيل تسديد (-)",
                             on_click=lambda e, cid=c_id, cname=name: open_trans_form(cid, cname, 'payment')
                         ),
                         ft.IconButton(
                             icon=ft.Icons.ASSESSMENT,
+                            icon_size=20,
+                            padding=4,
+                            width=30,
+                            height=30,
                             icon_color=c["primary"],
                             tooltip="كشف الحساب والتقرير",
                             on_click=lambda e, cid=c_id, cname=name, cphone=phone: open_report_form(cid, cname, cphone)
                         ),
                         ft.IconButton(
                             icon=ft.Icons.DELETE_OUTLINE,
+                            icon_size=20,
+                            padding=4,
+                            width=30,
+                            height=30,
                             icon_color="#ef4444",
                             tooltip="حذف الزبون (يشترط خلو السجل من المعاملات)",
                             on_click=lambda e, cid=c_id, cname=name: handle_delete_client(cid, cname)
                         ),
-                    ], spacing=0)
+                    ], spacing=2, wrap=True)
 
                     clients_table.rows.append(
                         ft.DataRow(
                             color=row_color,
                             cells=[
-                                ft.DataCell(ft.Text(name, weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                                ft.DataCell(ft.Text(phone if phone else "غير محدد", color=c["text_sec"])),
-                                ft.DataCell(ft.Text(f"{debt:,.2f} دج", color="#f87171" if debt > 0 and app_state["theme"] not in ["light", "accounting", "light_blue"] else ("#dc2626" if debt > 0 else "#059669"), weight=ft.FontWeight.BOLD)),
-                                ft.DataCell(actions_row),
+                                ft.DataCell(ft.Text(name, size=12, weight=ft.FontWeight.BOLD, color=c["text_main"])),
+                                ft.DataCell(ft.Text(phone if phone else "غير محدد", size=12, color=c["text_sec"])),
+                                ft.DataCell(ft.Text(f"{debt:,.2f} دج", size=12, color="#f87171" if debt > 0 and app_state["theme"] not in ["light", "accounting", "light_blue"] else ("#dc2626" if debt > 0 else "#059669"), weight=ft.FontWeight.BOLD)),
+                                ft.DataCell(actions_box),
                             ]
                         )
                     )
@@ -846,50 +867,60 @@ def main(page: ft.Page):
 
         add_client_section = ft.Container(
             content=ft.Column([
-                ft.Text("✨ إضافة زبون جديد ", size=16, weight=ft.FontWeight.BOLD, color=c["primary"]),
+                ft.Text("✨ إضافة زبون جديد ", size=15, weight=ft.FontWeight.BOLD, color=c["primary"]),
                 ft.ResponsiveRow([
                     ft.Column([name_input], col={"xs": 12, "sm": 5}),
                     ft.Column([phone_input], col={"xs": 12, "sm": 4}),
                     ft.Column([add_client_btn], col={"xs": 12, "sm": 3}),
-                ], alignment=ft.MainAxisAlignment.START)
+                ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER)
             ]),
-            padding=15, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None
+            padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None
         )
+
+        # شريط علوي متجاوب يناسب شاشة الهاتف والكمبيوتر
+        top_bar = ft.ResponsiveRow([
+            ft.Column([
+                ft.Row([
+                    ft.Icon(ft.Icons.STOREFRONT, size=26, color=c["primary"]),
+                    ft.Text("نظام تسيير وإدارة الديون", size=19, weight=ft.FontWeight.BOLD, color=c["text_main"])
+                ], spacing=8)
+            ], col={"xs": 12, "md": 5}),
+            ft.Column([
+                ft.Row([
+                    report_seniority_btn,
+                    theme_dropdown,
+                    logout_btn
+                ], spacing=8, wrap=True, alignment=ft.MainAxisAlignment.END)
+            ], col={"xs": 12, "md": 7})
+        ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
+
+        # شريط البحث والأزرار متجاوب على شاشة الهاتف
+        filter_bar = ft.ResponsiveRow([
+            ft.Column([search_input], col={"xs": 12, "sm": 5}),
+            ft.Column([debtors_filter], col={"xs": 12, "sm": 3}),
+            ft.Column([refresh_btn], col={"xs": 6, "sm": 2}),
+            ft.Column([export_excel_btn], col={"xs": 6, "sm": 2}),
+        ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
         main_view = ft.View(
             "/",
             [
-                ft.Row([
-                    ft.Row([
-                        ft.Icon(ft.Icons.STOREFRONT, size=28, color=c["primary"]),
-                        ft.Text("نظام تسيير وإدارة الديون", size=22, weight=ft.FontWeight.BOLD, color=c["text_main"])
-                    ], spacing=10),
-                    ft.Row([
-                        report_seniority_btn,
-                        theme_dropdown,
-                        logout_btn
-                    ], spacing=10)
-                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                top_bar,
                 ft.Divider(color=c["border"]),
                 dashboard_header,
-                ft.Divider(height=10, color="transparent"),
+                ft.Divider(height=8, color="transparent"),
                 add_client_section,
-                ft.Divider(height=15, color="transparent"),
+                ft.Divider(height=12, color="transparent"),
                 trans_container,   
                 report_container,   
                 seniority_container,
-                ft.ResponsiveRow([
-                    ft.Column([search_input], col={"xs": 12, "sm": 6}),
-                    ft.Column([debtors_filter], col={"xs": 12, "sm": 3}),
-                    ft.Column([refresh_btn], col={"xs": 6, "sm": 1.5}),
-                    ft.Column([export_excel_btn], col={"xs": 6, "sm": 1.5}),
-                ], alignment=ft.MainAxisAlignment.START, vertical_alignment=ft.CrossAxisAlignment.CENTER),
-                ft.Divider(height=10, color="transparent"),
-                ft.Text("📋 قائمة الزبائن والديون", size=18, weight=ft.FontWeight.BOLD, color=c["text_main"]),
+                filter_bar,
+                ft.Divider(height=8, color="transparent"),
+                ft.Text("📋 قائمة الزبائن والديون", size=17, weight=ft.FontWeight.BOLD, color=c["text_main"]),
                 table_container
             ],
             bgcolor=c["bg"],
-            padding=20,
+            padding=12,
             scroll=ft.ScrollMode.AUTO
         )
         page.views.append(main_view)
@@ -913,4 +944,4 @@ def main(page: ft.Page):
     show_login_view()
 
 if __name__ == "__main__":
-    ft.app(target=main)
+     ft.app(target=main)
