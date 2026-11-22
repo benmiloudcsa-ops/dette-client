@@ -66,6 +66,11 @@ def add_transaction(client_id, amount, trans_type, date_str=None, note=""):
         data["date"] = date_str
     requests.post(url, headers=headers, json=data)
 
+def delete_transaction(tx_id):
+    url = f"{SUPABASE_URL}/rest/v1/transactions?id=eq.{tx_id}"
+    res = requests.delete(url, headers=headers)
+    return res.status_code in [200, 204]
+
 def get_dashboard_stats():
     res_clients = requests.get(f"{SUPABASE_URL}/rest/v1/clients?select=id", headers=headers)
     total_clients = len(res_clients.json()) if res_clients.status_code == 200 else 0
@@ -527,7 +532,6 @@ def main(page: ft.Page):
 
         report_seniority_btn = ft.FilledButton("أقدمية التسديد", icon=ft.Icons.HISTORY, bgcolor=c["accent_btn"], color="white", on_click=open_seniority_report)
 
-        # حاوية عرض بطاقات الزبائن المتجاوبة لكل الشاشات
         clients_cards_column = ft.Column(spacing=10)
 
         trans_amount_input = ft.TextField(label="المبلغ (دج)", keyboard_type=ft.KeyboardType.NUMBER, expand=True, focused_border_color=c["primary"])
@@ -584,10 +588,19 @@ def main(page: ft.Page):
         report_title = ft.Text("", weight=ft.FontWeight.BOLD, size=15, color=c["primary"])
         start_date_input = ft.TextField(label="من تاريخ", value="2026-01-01", expand=True)
         end_date_input = ft.TextField(label="إلى تاريخ", value=datetime.now().strftime("%Y-%m-%d"), expand=True)
-        report_results_column = ft.Column(spacing=5)
+        report_results_column = ft.Column(spacing=6)
         current_report_client = {"cid": None, "name": "", "phone": ""}
 
         cached_report_text = {"text": ""}
+
+        def handle_delete_transaction(tx_id):
+            if delete_transaction(tx_id):
+                show_snack("تم حذف العملية بنجاح!", "green")
+                generate_report(None)
+                refresh_list()
+                update_dashboard_stats()
+            else:
+                show_snack("تعذر حذف العملية!", "red")
 
         def generate_report(e):
             cid = current_report_client['cid']
@@ -629,11 +642,23 @@ def main(page: ft.Page):
                         report_lines.append(f"▫️ {t_date} | {t_desc} | الرصيد: {running_balance:.2f}")
 
                     report_results_column.controls.append(
-                        ft.Row([
-                            ft.Text(f"التاريخ: {t_date}", size=12, color=c["text_sec"]),
-                            ft.Text(t_desc, color=t_color, weight=ft.FontWeight.BOLD, size=12),
-                            ft.Text(f"الرصيد: {running_balance:.2f} دج", size=12, italic=True, color=c["text_main"])
-                        ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True)
+                        ft.Container(
+                            content=ft.Row([
+                                ft.Column([
+                                    ft.Text(t_desc, color=t_color, weight=ft.FontWeight.BOLD, size=13),
+                                    ft.Text(f"التاريخ: {t_date} | الرصيد: {running_balance:.2f} دج", size=11, color=c["text_sec"]),
+                                ], spacing=2, expand=True),
+                                ft.IconButton(
+                                    icon=ft.Icons.DELETE_OUTLINE,
+                                    icon_color="#ef4444",
+                                    tooltip="حذف هذه العملية",
+                                    on_click=lambda e, transaction_id=t_id: handle_delete_transaction(transaction_id)
+                                )
+                            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, vertical_alignment=ft.CrossAxisAlignment.CENTER),
+                            padding=8,
+                            border_radius=8,
+                            bgcolor=c["bg"]
+                        )
                     )
                 report_lines.append(f"─────────────────")
                 report_lines.append(f"📌 *الرصيد الإجمالي النهائي: {running_balance:.2f} دج*")
@@ -736,7 +761,7 @@ def main(page: ft.Page):
             report_results_column.controls.clear()
             cached_report_text["text"] = ""
             report_container.visible = True
-            page.update()
+            generate_report(None)
 
         def handle_delete_client(cid, name):
             success, msg = delete_client_if_empty(cid)
@@ -772,37 +797,41 @@ def main(page: ft.Page):
                     card_bg = c["row_debt"] if debt > 0 else c["row_clear"]
                     amount_color = debt_color if debt > 0 else pay_color
 
-                    # أزرار الإجراءات الأربع كاملة وواضحة على جميع الشاشات بما فيها الهاتف
+                    # الأزرار الأربع على استقامة واحدة وبعرض متوازن يناسب شاشة الهاتف
                     actions_bar = ft.Row([
                         ft.ElevatedButton(
-                            "دين +",
-                            icon=ft.Icons.ADD_CIRCLE_OUTLINE,
+                            "دين+",
                             color=debt_color,
                             bgcolor=c["card_bg"],
+                            expand=True,
+                            style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=4, vertical=8)),
                             on_click=lambda e, cid=c_id, cname=name: open_trans_form(cid, cname, 'debt')
                         ),
                         ft.ElevatedButton(
-                            "تسديد -",
-                            icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,
+                            "تسديد-",
                             color=pay_color,
                             bgcolor=c["card_bg"],
+                            expand=True,
+                            style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=4, vertical=8)),
                             on_click=lambda e, cid=c_id, cname=name: open_trans_form(cid, cname, 'payment')
                         ),
                         ft.ElevatedButton(
                             "تقرير",
-                            icon=ft.Icons.ASSESSMENT,
                             color=c["primary"],
                             bgcolor=c["card_bg"],
+                            expand=True,
+                            style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=4, vertical=8)),
                             on_click=lambda e, cid=c_id, cname=name, cphone=phone: open_report_form(cid, cname, cphone)
                         ),
                         ft.ElevatedButton(
                             "حذف",
-                            icon=ft.Icons.DELETE_OUTLINE,
                             color="#ef4444",
                             bgcolor=c["card_bg"],
+                            expand=True,
+                            style=ft.ButtonStyle(padding=ft.padding.symmetric(horizontal=4, vertical=8)),
                             on_click=lambda e, cid=c_id, cname=name: handle_delete_client(cid, cname)
                         ),
-                    ], spacing=6, wrap=True)
+                    ], spacing=4)
 
                     clients_cards_column.controls.append(
                         ft.Container(
