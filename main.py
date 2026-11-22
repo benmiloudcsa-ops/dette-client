@@ -8,8 +8,8 @@ import threading
 import time
 
 # --- إعدادات Supabase السحابية ---
-SUPABASE_URL = "https://osvdhhqllhmdeybsuoss.supabase.co"    # رابط مشروعك في Supabase
-SUPABASE_KEY = "sb_publishable_BdSna0lbc71VC3tn2Wu0Yw_4x3RX-nS" # مفتاح الـ Anon/Public API
+SUPABASE_URL = "https://osvdhhqllhmdeybsuoss.supabase.co"
+SUPABASE_KEY = "sb_publishable_BdSna0lbc71VC3tn2Wu0Yw_4x3RX-nS"
 
 headers = {
     "apikey": SUPABASE_KEY,
@@ -18,12 +18,10 @@ headers = {
     "Prefer": "return=representation"
 }
 
-# --- حالة التطبيق العامة (تخزين الثيم الحالي، يبدأ بالثيم الأزرق الملكي) ---
 app_state = {
-    "theme": "royal"  # الخيارات المتاحة: "royal", "light_blue", "accounting", "butcher_modern", "dark", "light"
+    "theme": "royal"
 }
 
-# --- الفئة المساعدة لتوليد ملفات PDF مع دعم Unicode والخط العريض العربي ---
 class PDFReport(FPDF):
     def header(self):
         try:
@@ -35,7 +33,6 @@ class PDFReport(FPDF):
         self.cell(0, 10, 'Customer Debt Report - تقرير ديون الزبون', 0, 1, 'C')
         self.ln(5)
 
-# --- دالّات التعامل مع السحابة (Supabase REST API) ---
 def add_client(name, phone):
     url = f"{SUPABASE_URL}/rest/v1/clients"
     data = {"name": name, "phone": phone if phone else None}
@@ -72,7 +69,7 @@ def add_transaction(client_id, amount, trans_type, date_str=None, note=""):
 def get_dashboard_stats():
     res_clients = requests.get(f"{SUPABASE_URL}/rest/v1/clients?select=id", headers=headers)
     total_clients = len(res_clients.json()) if res_clients.status_code == 200 else 0
-    
+
     res_txs = requests.get(f"{SUPABASE_URL}/rest/v1/transactions?select=amount,type", headers=headers)
     total_debt = 0
     total_paid = 0
@@ -89,7 +86,7 @@ def get_clients_summary(search_query="", debtors_only=False):
     url = f"{SUPABASE_URL}/rest/v1/clients?select=id,name,phone,transactions(amount,type)&order=name.asc"
     if search_query:
         url += f"&or=(name.ilike.*{search_query}*,phone.ilike.*{search_query}*)"
-    
+
     response = requests.get(url, headers=headers)
     if response.status_code == 200:
         data = response.json()
@@ -100,12 +97,12 @@ def get_clients_summary(search_query="", debtors_only=False):
             phone = c["phone"]
             txs = c.get("transactions", [])
             total_debt = sum(t["amount"] for t in txs if t["type"] == 'debt') - sum(t["amount"] for t in txs if t["type"] == 'payment')
-            
+
             if debtors_only and total_debt <= 0:
                 continue
-                
+
             results.append((c_id, name, phone, total_debt))
-        
+
         return results
     return []
 
@@ -120,16 +117,16 @@ def get_clients_payment_seniority():
             name = c["name"]
             phone = c["phone"]
             txs = c.get("transactions", [])
-            
+
             total_debt = sum(t["amount"] for t in txs if t["type"] == 'debt') - sum(t["amount"] for t in txs if t["type"] == 'payment')
-            
+
             payments = [t["date"] for t in txs if t["type"] == 'payment' and t.get("date")]
             if payments:
                 payments.sort(reverse=True)
                 last_payment_date = payments[0]
             else:
                 last_payment_date = "لا توجد تسديدات سابقة"
-                
+
             report_list.append({
                 "id": c_id,
                 "name": name,
@@ -137,7 +134,7 @@ def get_clients_payment_seniority():
                 "debt": total_debt,
                 "last_payment": last_payment_date
             })
-            
+
         report_list.sort(key=lambda x: x["last_payment"])
         return report_list
     return []
@@ -152,20 +149,19 @@ def get_client_period_report(client_id, start_date, end_date):
                 previous_balance += t["amount"]
             else:
                 previous_balance -= t["amount"]
-                
+
     url_txs = f"{SUPABASE_URL}/rest/v1/transactions?client_id=eq.{client_id}&date=gte.{start_date}&date=lte.{end_date}&select=id,amount,type,date,note&order=date.asc,id.asc"
     res_txs = requests.get(url_txs, headers=headers)
     transactions = []
     if res_txs.status_code == 200:
         for t in res_txs.json():
             transactions.append((t["id"], t["amount"], t["type"], t["date"], t.get("note", "")))
-            
+
     return previous_balance, transactions
 
-# --- التطبيق الرئيسي ---
 def main(page: ft.Page):
     page.title = "نظام إدارة ديون الزبائن - Gafaire"
-    page.rtl = True  
+    page.rtl = True
     page.window.maximized = True
 
     APP_PASSWORD = "admin123"
@@ -174,51 +170,51 @@ def main(page: ft.Page):
         t = app_state["theme"]
         if t == "royal":
             return {
-                "bg": "#0d1b2a",          
-                "card_bg": "#1b263b",     
+                "bg": "#0d1b2a",
+                "card_bg": "#1b263b",
                 "text_main": "#ffffff",
                 "text_sec": "#90e0ef",
                 "border": "#415a77",
-                "row_debt": "#3a1c1c",    
-                "row_clear": "#133b32",   
+                "row_debt": "#3a1c1c",
+                "row_clear": "#133b32",
                 "primary": "#48cae4",
                 "accent_btn": "#0077b6"
             }
         elif t == "light_blue":
             return {
-                "bg": "#f0f9ff",          
-                "card_bg": "#ffffff",     
+                "bg": "#f0f9ff",
+                "card_bg": "#ffffff",
                 "text_main": "#0f172a",
                 "text_sec": "#475569",
                 "border": "#bae6fd",
-                "row_debt": "#fee2e2",    
-                "row_clear": "#f0fdf4",   
-                "primary": "#0284c7",     
+                "row_debt": "#fee2e2",
+                "row_clear": "#f0fdf4",
+                "primary": "#0284c7",
                 "accent_btn": "#0284c7"
             }
         elif t == "accounting":
             return {
-                "bg": "#f4f6f8",          
-                "card_bg": "#ffffff",     
+                "bg": "#f4f6f8",
+                "card_bg": "#ffffff",
                 "text_main": "#111827",
                 "text_sec": "#4b5563",
                 "border": "#d1d5db",
-                "row_debt": "#fef2f2",    
-                "row_clear": "#f0fdf4",   
-                "primary": "#047857",     
+                "row_debt": "#fef2f2",
+                "row_clear": "#f0fdf4",
+                "primary": "#047857",
                 "accent_btn": "#059669"
             }
         elif t == "butcher_modern":
             return {
-                "bg": "#121417",          
-                "card_bg": "#1e2229",     
+                "bg": "#121417",
+                "card_bg": "#1e2229",
                 "text_main": "#f3f4f6",
                 "text_sec": "#9ca3af",
                 "border": "#2f3640",
-                "row_debt": "#321e23",    
-                "row_clear": "#142d22",   
-                "primary": "#d4af37",     
-                "accent_btn": "#2c3e50"   
+                "row_debt": "#321e23",
+                "row_clear": "#142d22",
+                "primary": "#d4af37",
+                "accent_btn": "#2c3e50"
             }
         elif t == "dark":
             return {
@@ -232,7 +228,7 @@ def main(page: ft.Page):
                 "primary": "#38bdf8",
                 "accent_btn": "#0284c7"
             }
-        else:  # light
+        else:
             return {
                 "bg": "#f8fafc",
                 "card_bg": "white",
@@ -319,11 +315,11 @@ def main(page: ft.Page):
                             error_text,
                             ft.Divider(height=5, color="transparent"),
                             ft.FilledButton(
-                                "فتح التطبيق", 
-                                icon=ft.Icons.LOGIN, 
-                                bgcolor=c["accent_btn"], 
-                                color="white", 
-                                width=320, 
+                                "فتح التطبيق",
+                                icon=ft.Icons.LOGIN,
+                                bgcolor=c["accent_btn"],
+                                color="white",
+                                width=320,
                                 on_click=verify_password
                             )
                         ], horizontal_alignment=ft.CrossAxisAlignment.CENTER, spacing=10),
@@ -367,7 +363,7 @@ def main(page: ft.Page):
 
         dashboard_card_clients = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.PEOPLE, size=30, color=c["primary"]),
+                ft.Icon(ft.Icons.PEOPLE, size=28, color=c["primary"]),
                 ft.Column([
                     ft.Text("إجمالي الزبائن", size=12, color=c["text_sec"]),
                     stat_clients_text
@@ -378,7 +374,7 @@ def main(page: ft.Page):
 
         dashboard_card_debt = ft.Container(
             content=ft.Row([
-                ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, size=30, color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626"),
+                ft.Icon(ft.Icons.ACCOUNT_BALANCE_WALLET, size=28, color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626"),
                 ft.Column([
                     ft.Text("إجمالي الديون المعلقة", size=12, color=c["text_sec"]),
                     stat_debt_text
@@ -396,13 +392,13 @@ def main(page: ft.Page):
         phone_input = ft.TextField(label="رقم الهاتف", prefix_icon=ft.Icons.PHONE, keyboard_type=ft.KeyboardType.PHONE, expand=True, focused_border_color=c["primary"])
         add_client_btn = ft.FilledButton("إضافة زبون", icon=ft.Icons.PERSON_ADD, bgcolor=c["accent_btn"], color="white", width=160, on_click=lambda e: handle_add_client())
 
-        search_input = ft.TextField(label="بحث سريع عن زبون بالاسم أو الهاتف...", prefix_icon=ft.Icons.SEARCH, expand=True, focused_border_color=c["primary"], on_change=lambda e: refresh_table())
-        
+        search_input = ft.TextField(label="بحث سريع عن زبون بالاسم أو الهاتف...", prefix_icon=ft.Icons.SEARCH, expand=True, focused_border_color=c["primary"], on_change=lambda e: refresh_list())
+
         debtors_filter = ft.Checkbox(
-            label="عرض المدينين فقط", 
-            value=True, 
+            label="عرض المدينين فقط",
+            value=True,
             active_color=c["primary"],
-            on_change=lambda e: refresh_table()
+            on_change=lambda e: refresh_list()
         )
 
         def show_snack(message, color="green"):
@@ -411,14 +407,14 @@ def main(page: ft.Page):
             page.update()
 
         def manual_refresh(e):
-            refresh_table()
+            refresh_list()
             update_dashboard_stats()
             show_snack("تم تحديث البيانات بنجاح", "blue")
 
         refresh_btn = ft.FilledButton("تحديث", icon=ft.Icons.REFRESH, bgcolor="#334155" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#64748b", color="white", expand=True, on_click=manual_refresh)
         export_excel_btn = ft.FilledButton("تصدير Excel", icon=ft.Icons.TABLE_CHART, bgcolor="#16a34a", color="white", expand=True, on_click=lambda e: export_excel(e))
         logout_btn = ft.FilledButton("خروج", icon=ft.Icons.LOGOUT, bgcolor="#ef4444", color="white", on_click=lambda e: logout())
-        
+
         theme_dropdown = ft.Dropdown(
             value=app_state["theme"],
             options=[
@@ -442,7 +438,7 @@ def main(page: ft.Page):
             if not clients_data:
                 show_snack("لا توجد بيانات لتصديرها!", "orange")
                 return
-            
+
             data_list = []
             for c_item in clients_data:
                 c_id, name, phone, debt = c_item
@@ -452,7 +448,7 @@ def main(page: ft.Page):
                     "رقم الهاتف": phone if phone else "غير محدد",
                     "إجمالي الدين (دج)": debt
                 })
-            
+
             df = pd.DataFrame(data_list)
             file_name = f"clients_debt_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             df.to_excel(file_name, index=False)
@@ -460,25 +456,14 @@ def main(page: ft.Page):
 
         # --- حاوية تقرير أقدمية التسديد ---
         seniority_title = ft.Text("⏳ تقرير أقدمية تسديد الديون (مرتب تنازلياً حسب الأقدمية)", weight=ft.FontWeight.BOLD, size=15, color=c["primary"])
-        seniority_table = ft.DataTable(
-            column_spacing=12,
-            horizontal_margin=10,
-            columns=[
-                ft.DataColumn(ft.Text("الزبون", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الهاتف", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الدين", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-                ft.DataColumn(ft.Text("آخر تسديد", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-            ],
-            rows=[]
-        )
-        seniority_table_container = ft.Row([seniority_table], scroll=ft.ScrollMode.AUTO)
+        seniority_list_column = ft.Column(spacing=8)
 
         def export_seniority_excel(e):
             report_data = get_clients_payment_seniority()
             if not report_data:
                 show_snack("لا توجد بيانات لتصديرها!", "orange")
                 return
-            
+
             data_list = []
             for item in report_data:
                 data_list.append({
@@ -487,7 +472,7 @@ def main(page: ft.Page):
                     "إجمالي الدين (دج)": item["debt"],
                     "تاريخ آخر تسديد": item["last_payment"]
                 })
-            
+
             df = pd.DataFrame(data_list)
             file_name = f"payment_seniority_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx"
             df.to_excel(file_name, index=False)
@@ -500,7 +485,7 @@ def main(page: ft.Page):
                 seniority_title,
                 ft.Text("يوضح هذا التقرير الزبائن مرتبين حسب تاريخ آخر عملية تسديد قاموا بها.", size=12, color=c["text_sec"]),
                 ft.Divider(),
-                seniority_table_container,
+                seniority_list_column,
                 ft.Divider(),
                 ft.Row([
                     export_seniority_excel_btn,
@@ -513,28 +498,28 @@ def main(page: ft.Page):
         def open_seniority_report(e):
             trans_container.visible = False
             report_container.visible = False
-            seniority_table.rows.clear()
-            
+            seniority_list_column.controls.clear()
+
             data = get_clients_payment_seniority()
             if not data:
-                seniority_table.rows.append(
-                    ft.DataRow(cells=[
-                        ft.DataCell(ft.Text("لا توجد بيانات مسجلة", size=12, color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
-                    ])
-                )
+                seniority_list_column.controls.append(ft.Text("لا توجد بيانات مسجلة", size=12, color=c["text_sec"]))
             else:
                 for item in data:
-                    seniority_table.rows.append(
-                        ft.DataRow(
-                            cells=[
-                                ft.DataCell(ft.Text(item["name"], size=12, weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                                ft.DataCell(ft.Text(item["phone"], size=12, color=c["text_sec"])),
-                                ft.DataCell(ft.Text(f"{item['debt']:,.2f} دج", size=12, color="#f87171" if item['debt'] > 0 else "#059669", weight=ft.FontWeight.BOLD)),
-                                ft.DataCell(ft.Text(item["last_payment"], size=12, color=c["primary"] if item["last_payment"] != "لا توجد تسديدات سابقة" else "#dc2626", weight=ft.FontWeight.BOLD)),
-                            ]
+                    seniority_list_column.controls.append(
+                        ft.Container(
+                            content=ft.Column([
+                                ft.Row([
+                                    ft.Text(item["name"], size=14, weight=ft.FontWeight.BOLD, color=c["text_main"]),
+                                    ft.Text(f"{item['debt']:,.2f} دج", size=13, color="#f87171" if item['debt'] > 0 else "#059669", weight=ft.FontWeight.BOLD),
+                                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                ft.Row([
+                                    ft.Text(f"الهاتف: {item['phone']}", size=12, color=c["text_sec"]),
+                                    ft.Text(f"آخر تسديد: {item['last_payment']}", size=12, color=c["primary"] if item["last_payment"] != "لا توجد تسديدات سابقة" else "#dc2626", weight=ft.FontWeight.BOLD),
+                                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, wrap=True),
+                            ], spacing=4),
+                            padding=10,
+                            border_radius=8,
+                            bgcolor=c["bg"]
                         )
                     )
             seniority_container.visible = True
@@ -542,19 +527,8 @@ def main(page: ft.Page):
 
         report_seniority_btn = ft.FilledButton("أقدمية التسديد", icon=ft.Icons.HISTORY, bgcolor=c["accent_btn"], color="white", on_click=open_seniority_report)
 
-        clients_table = ft.DataTable(
-            column_spacing=10,
-            horizontal_margin=8,
-            columns=[
-                ft.DataColumn(ft.Text("الزبون", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الهاتف", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الدين", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-                ft.DataColumn(ft.Text("الإجراءات", weight=ft.FontWeight.BOLD, size=12, color=c["text_main"])),
-            ],
-            rows=[]
-        )
-        
-        table_container = ft.Row([clients_table], scroll=ft.ScrollMode.AUTO, expand=True)
+        # حاوية عرض بطاقات الزبائن المتجاوبة لكل الشاشات
+        clients_cards_column = ft.Column(spacing=10)
 
         trans_amount_input = ft.TextField(label="المبلغ (دج)", keyboard_type=ft.KeyboardType.NUMBER, expand=True, focused_border_color=c["primary"])
         trans_date_input = ft.TextField(label="التاريخ", value=datetime.now().strftime("%Y-%m-%d"), expand=True)
@@ -572,7 +546,7 @@ def main(page: ft.Page):
                 trans_note_input.value = ""
                 trans_container.visible = False
                 show_snack("تم تسجيل المعاملة بنجاح!")
-                refresh_table()
+                refresh_list()
                 update_dashboard_stats()
             except ValueError:
                 trans_amount_input.error_text = "أدخل مبلغاً صحيحاً"
@@ -587,7 +561,7 @@ def main(page: ft.Page):
                 ]),
                 ft.Row([trans_note_input]),
                 ft.Row([
-                    ft.FilledButton("تأكيد العملية", icon=ft.Icons.CHECK, bgcolor="#10b981", color="white", on_click=confirm_transaction), 
+                    ft.FilledButton("تأكيد العملية", icon=ft.Icons.CHECK, bgcolor="#10b981", color="white", on_click=confirm_transaction),
                     ft.TextButton("إلغاء", icon=ft.Icons.CLOSE, on_click=lambda e: setattr(trans_container, 'visible', False) or page.update())
                 ], wrap=True)
             ], tight=True),
@@ -612,7 +586,7 @@ def main(page: ft.Page):
         end_date_input = ft.TextField(label="إلى تاريخ", value=datetime.now().strftime("%Y-%m-%d"), expand=True)
         report_results_column = ft.Column(spacing=5)
         current_report_client = {"cid": None, "name": "", "phone": ""}
-        
+
         cached_report_text = {"text": ""}
 
         def generate_report(e):
@@ -620,10 +594,10 @@ def main(page: ft.Page):
             name = current_report_client['name']
             s_date = start_date_input.value.strip()
             e_date = end_date_input.value.strip()
-            
+
             prev_balance, txs = get_client_period_report(cid, s_date, e_date)
             report_results_column.controls.clear()
-            
+
             report_lines = [
                 f"📋 *تقرير كشف حساب زبون*",
                 f"👤 الزبون: {name}",
@@ -632,10 +606,10 @@ def main(page: ft.Page):
                 f"💰 الرصيد السابق: {prev_balance:.2f} دج",
                 f"─────────────────"
             ]
-            
+
             report_results_column.controls.append(ft.Text(f"الرصيد السابق قبل {s_date}: {prev_balance:.2f} دج", weight=ft.FontWeight.BOLD, size=13, color=c["primary"] if prev_balance <= 0 else "#f87171"))
             report_results_column.controls.append(ft.Divider())
-            
+
             if not txs:
                 report_results_column.controls.append(ft.Text("لا توجد حركات مسجلة خلال هذه الفترة.", color=c["text_sec"], italic=True))
                 report_lines.append("لا توجد حركات مسجلة خلال هذه الفترة.")
@@ -653,7 +627,7 @@ def main(page: ft.Page):
                         t_desc = f"تسديد: -{amt:.2f} دج{note_str}"
                         t_color = "#34d399" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#059669"
                         report_lines.append(f"▫️ {t_date} | {t_desc} | الرصيد: {running_balance:.2f}")
-                    
+
                     report_results_column.controls.append(
                         ft.Row([
                             ft.Text(f"التاريخ: {t_date}", size=12, color=c["text_sec"]),
@@ -663,7 +637,7 @@ def main(page: ft.Page):
                     )
                 report_lines.append(f"─────────────────")
                 report_lines.append(f"📌 *الرصيد الإجمالي النهائي: {running_balance:.2f} دج*")
-                
+
             cached_report_text["text"] = "\n".join(report_lines)
             page.update()
 
@@ -676,14 +650,14 @@ def main(page: ft.Page):
             if not phone:
                 show_snack("رقم هاتف هذا الزبون غير مسجل!", "red")
                 return
-                
+
             clean_phone = phone.strip().replace(" ", "").replace("+", "")
             if clean_phone.startswith("0"):
                 clean_phone = "213" + clean_phone[1:]
-                
+
             encoded_text = urllib.parse.quote(report_text)
             whatsapp_url = f"https://wa.me/{clean_phone}?text={encoded_text}"
-            
+
             page.launch_url(whatsapp_url)
             show_snack("جاري فتح الواتساب لإرسال التقرير...")
 
@@ -692,31 +666,31 @@ def main(page: ft.Page):
             name = current_report_client['name']
             s_date = start_date_input.value.strip()
             e_date = end_date_input.value.strip()
-            
+
             prev_balance, txs = get_client_period_report(cid, s_date, e_date)
-            
+
             pdf = PDFReport()
             pdf.add_page()
-            
+
             try:
                 pdf.add_font("ArabicFont", "", "C:/Windows/Fonts/arial.ttf", uni=True)
                 pdf.add_font("ArabicFont", "B", "C:/Windows/Fonts/arialbd.ttf", uni=True)
                 pdf.set_font("ArabicFont", "", 11)
             except:
                 pdf.set_font("Arial", "", 11)
-                
+
             pdf.cell(0, 8, f"اسم الزبون: {name}", 0, 1)
             pdf.cell(0, 8, f"الفترة: من {s_date} إلى {e_date}", 0, 1)
             pdf.cell(0, 8, f"الرصيد السابق: {prev_balance:.2f} دج", 0, 1)
             pdf.ln(5)
-            
+
             pdf.set_font("ArabicFont", "B", 10)
             pdf.cell(30, 7, "التاريخ", 1)
             pdf.cell(40, 7, "المعاملة", 1)
             pdf.cell(35, 7, "المبلغ (دج)", 1)
             pdf.cell(85, 7, "ملاحظة", 1)
             pdf.ln()
-            
+
             pdf.set_font("ArabicFont", "", 9)
             for t in txs:
                 t_id, amt, t_type, t_date, note = t
@@ -726,7 +700,7 @@ def main(page: ft.Page):
                 pdf.cell(35, 6, f"{amt:.2f}", 1)
                 pdf.cell(85, 6, str(note) if note else "", 1)
                 pdf.ln()
-                
+
             file_name = f"report_{name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
             pdf.output(file_name)
             show_snack(f"تم تصدير ملف PDF بنجاح: {file_name}", "green")
@@ -741,8 +715,8 @@ def main(page: ft.Page):
                     ft.Column([end_date_input], col={"xs": 12, "sm": 6}),
                 ]),
                 ft.Row([
-                    ft.FilledButton("عرض التقرير", icon=ft.Icons.SEARCH, bgcolor=c["accent_btn"], color="white", on_click=generate_report), 
-                    ft.FilledButton("إرسال عبر الواتساب", icon=ft.Icons.CHAT, bgcolor="#059669", color="white", on_click=send_whatsapp), 
+                    ft.FilledButton("عرض التقرير", icon=ft.Icons.SEARCH, bgcolor=c["accent_btn"], color="white", on_click=generate_report),
+                    ft.FilledButton("إرسال عبر الواتساب", icon=ft.Icons.CHAT, bgcolor="#059669", color="white", on_click=send_whatsapp),
                     export_pdf_btn,
                     ft.TextButton("إغلاق", icon=ft.Icons.CLOSE, on_click=lambda e: setattr(report_container, 'visible', False) or page.update())
                 ], wrap=True),
@@ -768,85 +742,83 @@ def main(page: ft.Page):
             success, msg = delete_client_if_empty(cid)
             if success:
                 show_snack(msg, "green")
-                refresh_table()
+                refresh_list()
                 update_dashboard_stats()
             else:
                 show_snack(msg, "red")
 
-        def refresh_table():
-            clients_table.rows.clear()
+        def refresh_list():
+            clients_cards_column.controls.clear()
             clients = get_clients_summary(
                 search_input.value if search_input.value else "",
                 debtors_only=debtors_filter.value
             )
-            
+
             if not clients:
-                clients_table.rows.append(
-                    ft.DataRow(cells=[
-                        ft.DataCell(ft.Text("لا توجد نتائج مطابقة للبحث أو الفلتر", size=12, color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
-                        ft.DataCell(ft.Text("-", size=12, color=c["text_sec"])),
-                    ])
+                clients_cards_column.controls.append(
+                    ft.Container(
+                        content=ft.Text("لا توجد نتائج مطابقة للبحث أو الفلتر", size=13, color=c["text_sec"]),
+                        padding=14,
+                        bgcolor=c["card_bg"],
+                        border_radius=10
+                    )
                 )
             else:
+                debt_color = "#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626"
+                pay_color = "#34d399" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#059669"
+
                 for client in clients:
                     c_id, name, phone, debt = client
-                    row_color = c["row_debt"] if debt > 0 else c["row_clear"]
-                    
-                    # توزيع الأيقونات الأربع بوضوح لتظهر كاملة على شاشة الهاتف
-                    actions_box = ft.Row([
-                        ft.IconButton(
+                    card_bg = c["row_debt"] if debt > 0 else c["row_clear"]
+                    amount_color = debt_color if debt > 0 else pay_color
+
+                    # أزرار الإجراءات الأربع كاملة وواضحة على جميع الشاشات بما فيها الهاتف
+                    actions_bar = ft.Row([
+                        ft.ElevatedButton(
+                            "دين +",
                             icon=ft.Icons.ADD_CIRCLE_OUTLINE,
-                            icon_size=20,
-                            padding=4,
-                            width=30,
-                            height=30,
-                            icon_color="#f87171" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#dc2626",
-                            tooltip="إضافة دين (+)",
+                            color=debt_color,
+                            bgcolor=c["card_bg"],
                             on_click=lambda e, cid=c_id, cname=name: open_trans_form(cid, cname, 'debt')
                         ),
-                        ft.IconButton(
+                        ft.ElevatedButton(
+                            "تسديد -",
                             icon=ft.Icons.REMOVE_CIRCLE_OUTLINE,
-                            icon_size=20,
-                            padding=4,
-                            width=30,
-                            height=30,
-                            icon_color="#34d399" if app_state["theme"] not in ["light", "accounting", "light_blue"] else "#059669",
-                            tooltip="تسجيل تسديد (-)",
+                            color=pay_color,
+                            bgcolor=c["card_bg"],
                             on_click=lambda e, cid=c_id, cname=name: open_trans_form(cid, cname, 'payment')
                         ),
-                        ft.IconButton(
+                        ft.ElevatedButton(
+                            "تقرير",
                             icon=ft.Icons.ASSESSMENT,
-                            icon_size=20,
-                            padding=4,
-                            width=30,
-                            height=30,
-                            icon_color=c["primary"],
-                            tooltip="كشف الحساب والتقرير",
+                            color=c["primary"],
+                            bgcolor=c["card_bg"],
                             on_click=lambda e, cid=c_id, cname=name, cphone=phone: open_report_form(cid, cname, cphone)
                         ),
-                        ft.IconButton(
+                        ft.ElevatedButton(
+                            "حذف",
                             icon=ft.Icons.DELETE_OUTLINE,
-                            icon_size=20,
-                            padding=4,
-                            width=30,
-                            height=30,
-                            icon_color="#ef4444",
-                            tooltip="حذف الزبون (يشترط خلو السجل من المعاملات)",
+                            color="#ef4444",
+                            bgcolor=c["card_bg"],
                             on_click=lambda e, cid=c_id, cname=name: handle_delete_client(cid, cname)
                         ),
-                    ], spacing=2, wrap=True)
+                    ], spacing=6, wrap=True)
 
-                    clients_table.rows.append(
-                        ft.DataRow(
-                            color=row_color,
-                            cells=[
-                                ft.DataCell(ft.Text(name, size=12, weight=ft.FontWeight.BOLD, color=c["text_main"])),
-                                ft.DataCell(ft.Text(phone if phone else "غير محدد", size=12, color=c["text_sec"])),
-                                ft.DataCell(ft.Text(f"{debt:,.2f} دج", size=12, color="#f87171" if debt > 0 and app_state["theme"] not in ["light", "accounting", "light_blue"] else ("#dc2626" if debt > 0 else "#059669"), weight=ft.FontWeight.BOLD)),
-                                ft.DataCell(actions_box),
-                            ]
+                    clients_cards_column.controls.append(
+                        ft.Container(
+                            content=ft.Column([
+                                ft.Row([
+                                    ft.Text(name, size=15, weight=ft.FontWeight.BOLD, color=c["text_main"]),
+                                    ft.Text(f"{debt:,.2f} دج", size=14, weight=ft.FontWeight.BOLD, color=amount_color),
+                                ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+                                ft.Text(f"الهاتف: {phone if phone else 'غير محدد'}", size=12, color=c["text_sec"]),
+                                ft.Divider(height=4, color="transparent"),
+                                actions_bar
+                            ], spacing=4),
+                            padding=12,
+                            bgcolor=card_bg,
+                            border_radius=12,
+                            border=ft.border.all(1, c["border"])
                         )
                     )
             try:
@@ -860,7 +832,7 @@ def main(page: ft.Page):
                 name_input.value = ""
                 phone_input.value = ""
                 show_snack("تم إضافة الزبون بنجاح  !")
-                refresh_table()
+                refresh_list()
                 update_dashboard_stats()
             else:
                 show_snack("الرجاء إدخال اسم الزبون على الأقل!", "red")
@@ -877,12 +849,11 @@ def main(page: ft.Page):
             padding=12, bgcolor=c["card_bg"], border_radius=12, border=ft.border.all(1, c["border"]) if app_state["theme"] in ["light", "accounting", "light_blue"] else None
         )
 
-        # شريط علوي متجاوب يناسب شاشة الهاتف والكمبيوتر
         top_bar = ft.ResponsiveRow([
             ft.Column([
                 ft.Row([
-                    ft.Icon(ft.Icons.STOREFRONT, size=26, color=c["primary"]),
-                    ft.Text("نظام تسيير وإدارة الديون", size=19, weight=ft.FontWeight.BOLD, color=c["text_main"])
+                    ft.Icon(ft.Icons.STOREFRONT, size=24, color=c["primary"]),
+                    ft.Text("نظام تسيير وإدارة الديون", size=18, weight=ft.FontWeight.BOLD, color=c["text_main"])
                 ], spacing=8)
             ], col={"xs": 12, "md": 5}),
             ft.Column([
@@ -890,11 +861,10 @@ def main(page: ft.Page):
                     report_seniority_btn,
                     theme_dropdown,
                     logout_btn
-                ], spacing=8, wrap=True, alignment=ft.MainAxisAlignment.END)
+                ], spacing=8, wrap=True)
             ], col={"xs": 12, "md": 7})
         ], vertical_alignment=ft.CrossAxisAlignment.CENTER)
 
-        # شريط البحث والأزرار متجاوب على شاشة الهاتف
         filter_bar = ft.ResponsiveRow([
             ft.Column([search_input], col={"xs": 12, "sm": 5}),
             ft.Column([debtors_filter], col={"xs": 12, "sm": 3}),
@@ -911,13 +881,13 @@ def main(page: ft.Page):
                 ft.Divider(height=8, color="transparent"),
                 add_client_section,
                 ft.Divider(height=12, color="transparent"),
-                trans_container,   
-                report_container,   
+                trans_container,
+                report_container,
                 seniority_container,
                 filter_bar,
                 ft.Divider(height=8, color="transparent"),
                 ft.Text("📋 قائمة الزبائن والديون", size=17, weight=ft.FontWeight.BOLD, color=c["text_main"]),
-                table_container
+                clients_cards_column
             ],
             bgcolor=c["bg"],
             padding=12,
@@ -926,14 +896,14 @@ def main(page: ft.Page):
         page.views.append(main_view)
         page.update()
 
-        refresh_table()
+        refresh_list()
         update_dashboard_stats()
 
         def background_sync():
             while True:
                 time.sleep(10)
                 try:
-                    refresh_table()
+                    refresh_list()
                     update_dashboard_stats()
                 except:
                     pass
@@ -944,4 +914,4 @@ def main(page: ft.Page):
     show_login_view()
 
 if __name__ == "__main__":
-     ft.app(target=main)
+    ft.app(target=main)
